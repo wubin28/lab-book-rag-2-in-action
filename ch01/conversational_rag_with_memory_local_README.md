@@ -1,4 +1,4 @@
-## Quickstart for macOS iter2 zsh
+## Quickstart for conversational_rag_with_memory_local.py on macOS iter2 zsh
 
 ```
 **第1步：创建虚拟环境**

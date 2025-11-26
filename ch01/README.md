@@ -18,8 +18,15 @@ pip install --upgrade pip
 ```
 
 **第4步：安装所需的依赖包**
+
+For `conversational_rag_with_memory_local.py` (recommended):
 ```bash
-pip install langchain openai faiss-cpu tiktoken
+pip install langchain-community langchain-openai faiss-cpu sentence-transformers
+```
+
+Or for `conversational_rag_with_memory.py` (requires OpenAI tiktoken):
+```bash
+pip install langchain-community langchain-openai faiss-cpu tiktoken
 ```
 
 **第5步：准备DeepSeek API密钥**
@@ -29,7 +36,7 @@ pip install langchain openai faiss-cpu tiktoken
 
 **第6步：运行脚本**
 ```bash
-python conversational_rag_with_memory.py
+python conversational_rag_with_memory_local.py
 ```
 
 运行后，脚本会提示：
@@ -43,5 +50,25 @@ Please enter your DeepSeek API key:
 ```bash
 deactivate
 ```
+
+## Troubleshooting
+
+### SSL Error with tiktoken
+
+If you encounter `SSLError: [SSL: UNEXPECTED_EOF_WHILE_READING]` when running the script, this is because `tiktoken` needs to download tokenizer data from OpenAI's servers. This is a known issue on some macOS systems with SSL certificate restrictions.
+
+**Solution: Use the local embedding version**
+
+Instead of `conversational_rag_with_memory.py`, use `conversational_rag_with_memory_local.py` which uses local HuggingFace embeddings:
+
+```bash
+# Install sentence-transformers
+pip install sentence-transformers
+
+# Run the local version
+python conversational_rag_with_memory_local.py
+```
+
+The local version works exactly the same but doesn't require downloading external tokenizer data.
 
 ```

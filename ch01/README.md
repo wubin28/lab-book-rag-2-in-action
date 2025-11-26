@@ -22,6 +22,9 @@ pip install --upgrade pip
 For `conversational_rag_with_memory_local.py` (recommended):
 ```bash
 pip install langchain-community langchain-openai faiss-cpu sentence-transformers
+
+## For WSL2 Ubuntu
+pip install 'httpx[socks]'
 ```
 
 Or for `conversational_rag_with_memory.py` (requires OpenAI tiktoken):

@@ -1,0 +1,87 @@
+@startuml conversational_rag_with_memory_local_component
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+LAYOUT_WITH_LEGEND()
+
+title Component Diagram for Conversational RAG with Memory System
+
+Person(user, "User", "Asks questions about RAG concepts")
+
+Container_Boundary(rag_system, "conversational_rag_with_memory_local.py") {
+    
+    Component(main_flow, "Main Interaction Flow", "Python Script", "Orchestrates the question-answering process")
+    
+    Component(knowledge_base, "Knowledge Base", "Python List", "Stores raw text documents:\n- RAG 1.0 description\n- RAG 2.0 description\n- LangChain capabilities")
+    
+    Component(embeddings_model, "Embeddings Model", "HuggingFaceEmbeddings", "Converts text to semantic vectors\nModel: sentence-transformers/all-MiniLM-L6-v2\n- Trained on billions of sentences\n- Understands semantic similarity\n- Outputs 384-dimensional vectors")
+    
+    Component(vector_store, "Vector Store", "FAISS", "Indexes and retrieves vectors:\n- Stores text embeddings\n- Performs similarity search\n- Returns most relevant documents")
+    
+    Component(memory, "Conversation Memory", "ConversationBufferMemory", "Maintains chat history:\n- Stores past questions\n- Stores past answers\n- Enables contextual follow-up")
+    
+    Component(retriever, "Retriever", "VectorStoreRetriever", "Retrieves relevant context:\n- Search type: similarity\n- Finds semantically related docs\n- Passes context to LLM")
+    
+    Component(qa_chain, "QA Chain", "ConversationalRetrievalChain", "Coordinates retrieval and generation:\n- Combines retriever + memory\n- Sends context to LLM\n- Returns final answer")
+    
+    Component(llm, "Language Model", "ChatOpenAI", "Generates answers:\nModel: deepseek-reasoner\n- Receives question + context\n- Uses retrieved documents\n- Considers chat history\n- Produces natural language response")
+}
+
+System_Ext(deepseek_api, "DeepSeek API", "External LLM service")
+System_Ext(huggingface_hub, "HuggingFace Hub", "Downloads pre-trained models")
+
+' User interactions
+Rel(user, main_flow, "Asks question", "Natural language")
+Rel(main_flow, user, "Returns answer", "Natural language")
+
+' Initialization flow
+Rel(main_flow, knowledge_base, "Loads", "texts list")
+Rel(main_flow, embeddings_model, "Initializes", "Downloads from HuggingFace")
+Rel(embeddings_model, huggingface_hub, "Downloads model", "HTTPS")
+Rel(main_flow, vector_store, "Creates", "FAISS.from_texts()")
+Rel(knowledge_base, embeddings_model, "Text input", "strings")
+Rel(embeddings_model, vector_store, "Vectors", "384-dim arrays")
+
+' Query flow
+Rel(main_flow, qa_chain, "Sends query", "qa_chain.run()")
+Rel(qa_chain, retriever, "Searches for context", "query text")
+Rel(retriever, vector_store, "Vector similarity search", "query embedding")
+Rel(qa_chain, memory, "Retrieves chat history", "")
+Rel(qa_chain, llm, "Sends: query + context + history", "")
+Rel(llm, deepseek_api, "API call", "HTTPS")
+Rel(llm, qa_chain, "Generated answer", "")
+Rel(qa_chain, memory, "Stores: question + answer", "")
+Rel(qa_chain, main_flow, "Returns answer", "")
+
+' Annotations
+note right of embeddings_model
+  **Key Responsibility:**
+  Transforms text into semantic vectors
+  
+  **How it knows similarity:**
+  - Pre-trained on billions of sentences
+  - Learned from context patterns
+  - "car" and "automobile" appear in 
+    similar contexts → similar vectors
+end note
+
+note right of vector_store
+  **Not a semantic expert!**
+  Just calculates mathematical distance
+  between vectors
+  
+  Embeddings model provides the "meaning"
+  FAISS provides the "speed"
+end note
+
+note right of memory
+  **Enables contextual follow-up:**
+  
+  Q1: "What was RAG 1.0 designed to do?"
+  Q2: "And how does RAG 2.0 improve that?"
+       ↑ "that" refers to previous context
+end note
+
+SHOW_LEGEND()
+
+@enduml
+

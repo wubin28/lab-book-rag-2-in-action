@@ -1,0 +1,103 @@
+@startuml rag_cloud_security_qa_component
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+LAYOUT_WITH_LEGEND()
+
+title Component Diagram for Cloud Security QA System (Single-Query RAG)
+
+Person(user, "Security Engineer", "Asks questions about cloud security policies")
+
+Container_Boundary(qa_system, "rag_cloud_security_qa.py") {
+    
+    Component(main_flow, "Main Execution Flow", "Python Script", "Orchestrates the security QA process")
+    
+    Component(security_docs, "Security Knowledge Base", "Python List", "Stores internal security policies:\n- AES-256 encryption requirement\n- API key rotation policy\n- MFA authentication requirement")
+    
+    Component(embeddings_model, "Embeddings Model", "HuggingFaceEmbeddings", "Converts security policies to vectors\nModel: sentence-transformers/all-MiniLM-L6-v2\n- Local model (no API calls)\n- 384-dimensional vectors\n- Understands semantic similarity")
+    
+    Component(vector_db, "Vector Database", "FAISS", "Indexes and retrieves policy vectors:\n- Fast similarity search\n- Returns most relevant policies\n- Local in-memory storage")
+    
+    Component(retriever, "Policy Retriever", "VectorStoreRetriever", "Retrieves relevant policies:\n- Search type: similarity\n- Finds matching security rules\n- Passes context to LLM")
+    
+    Component(qa_chain, "QA Chain", "RetrievalQA", "Coordinates retrieval and answer generation:\n- Chain type: 'stuff'\n- Combines retrieved policies\n- Sends to LLM for answer")
+    
+    Component(llm, "Language Model", "ChatOpenAI", "Generates security policy answers:\nModel: deepseek-reasoner\n- Receives question + policies\n- Produces accurate answers\n- Temperature: 0.7")
+}
+
+System_Ext(deepseek_api, "DeepSeek API", "External LLM service for reasoning")
+System_Ext(huggingface_hub, "HuggingFace Hub", "Downloads embedding model")
+
+' User interactions
+Rel(user, main_flow, "Asks security question", "Natural language")
+Rel(main_flow, user, "Returns policy answer", "Natural language")
+
+' Initialization flow
+Rel(main_flow, security_docs, "Loads", "docs list")
+Rel(main_flow, embeddings_model, "Initializes", "Downloads from HuggingFace")
+Rel(embeddings_model, huggingface_hub, "Downloads model", "HTTPS")
+Rel(main_flow, vector_db, "Creates", "FAISS.from_texts()")
+Rel(security_docs, embeddings_model, "Policy text input", "strings")
+Rel(embeddings_model, vector_db, "Policy vectors", "384-dim arrays")
+
+' Query flow (single-shot, no memory)
+Rel(main_flow, qa_chain, "Sends query", "qa_chain.run()")
+Rel(qa_chain, retriever, "Searches for policies", "query text")
+Rel(retriever, embeddings_model, "Vectorizes query", "text → vector")
+Rel(retriever, vector_db, "Similarity search", "query embedding")
+Rel(vector_db, retriever, "Returns relevant policies", "top-k documents")
+Rel(qa_chain, llm, "Sends: query + policies", "stuff chain")
+Rel(llm, deepseek_api, "API call", "HTTPS")
+Rel(llm, qa_chain, "Generated answer", "text")
+Rel(qa_chain, main_flow, "Returns answer", "text")
+
+' Key differences annotations
+note right of qa_chain
+  **RetrievalQA Chain**
+  
+  Key characteristics:
+  - Single-query mode (no memory)
+  - No conversation history
+  - Each query is independent
+  - Chain type: "stuff" 
+    (all docs in one prompt)
+  
+  vs ConversationalRetrievalChain:
+  ❌ No chat history tracking
+  ❌ No contextual follow-up
+  ✅ Simpler architecture
+  ✅ Lower latency
+end note
+
+note right of security_docs
+  **Domain-Specific Knowledge**
+  
+  Contains up-to-date policies:
+  - Encryption standards (AES-256)
+  - Compliance rules (90-day rotation)
+  - Authentication requirements (MFA)
+  
+  Updated: June 2025
+  
+  Why not train LLM on this?
+  ✅ Easier to update
+  ✅ More transparent
+  ✅ No retraining cost
+end note
+
+note right of embeddings_model
+  **Local Model Advantages**
+  
+  ✅ No API calls for embeddings
+  ✅ Privacy-preserving
+  ✅ Fast processing
+  ✅ Zero embedding cost
+  
+  Trade-off:
+  ❌ Less accurate than OpenAI
+  ✅ But sufficient for most use cases
+end note
+
+SHOW_LEGEND()
+
+@enduml
+
